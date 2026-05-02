@@ -1,0 +1,73 @@
+# Private design docs (kept local, not published to repo)
+docs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# Python (ingestion scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / editors
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Local data / dumps
+data/
+tmp/
+.cache/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS
+Thumbs.db
