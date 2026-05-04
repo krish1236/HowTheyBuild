@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: htb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: htb
+      POSTGRES_PASSWORD: htb
+      POSTGRES_DB: howtheybuild
+    ports:
+      - "5435:5432"
+    volumes:
+      - htb-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U htb -d howtheybuild"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  htb-pgdata:
