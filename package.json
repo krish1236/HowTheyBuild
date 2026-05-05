@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx scripts/db/migrate.ts",
-    "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild"
+    "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild",
+    "ingest": "tsx scripts/ingest.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
