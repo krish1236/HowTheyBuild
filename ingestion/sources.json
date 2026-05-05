@@ -1,0 +1,20 @@
+{
+  "cloudflare-blog": {
+    "name": "Cloudflare Blog",
+    "base_url": "https://blog.cloudflare.com",
+    "source_type": "blog",
+    "rss_url": "https://blog.cloudflare.com/rss/",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "stripe-engineering": {
+    "name": "Stripe Engineering",
+    "base_url": "https://stripe.com/blog",
+    "source_type": "blog",
+    "rss_url": "https://stripe.com/blog/feed.rss",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  }
+}
