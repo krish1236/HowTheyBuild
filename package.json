@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx scripts/db/migrate.ts",
     "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild",
-    "ingest": "tsx scripts/ingest.ts"
+    "ingest": "tsx --env-file=.env scripts/ingest.ts",
+    "verify-keys": "tsx --env-file=.env scripts/verify-keys.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
