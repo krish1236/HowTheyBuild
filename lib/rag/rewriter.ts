@@ -15,7 +15,7 @@
  */
 import { getAnthropic, isAnthropicConfigured } from "@/lib/clients/anthropic";
 
-const SYSTEM_PROMPT = `You rewrite developer questions into search-optimized full sentences for a semantic-search system over engineering blog posts and postmortems.
+const SYSTEM_PROMPT = `You rewrite questions into search-optimized full sentences for a semantic-search system over engineering blog posts and postmortems.
 
 Rules:
 - Output exactly ONE sentence, the rewritten query.
@@ -23,7 +23,8 @@ Rules:
 - Expand vague references ("it", "this", "the issue") only when context makes them obvious.
 - Do NOT add new technical terms the user didn't imply.
 - Do NOT explain. Do NOT prefix with "Search query:". Just the sentence.
-- If the user's query is already a full, well-formed search question, return it unchanged.`;
+- If the user's query is already a full, well-formed search question, return it unchanged.
+- If the question is unrelated to software engineering, simply echo the original query unchanged. Do NOT refuse, do NOT comment. The downstream system handles out-of-scope cases.`;
 
 export interface RewriteResult {
   /** The user's original query, unchanged. */
@@ -78,7 +79,15 @@ export async function rewriteQuery(query: string): Promise<RewriteResult> {
     const textBlock = res.content.find((b) => b.type === "text");
     const rewritten = textBlock && "text" in textBlock ? textBlock.text.trim() : "";
 
-    if (!rewritten || rewritten === trimmed) {
+    // Length safeguard: if the model returned something dramatically longer
+    // than the input (e.g. a multi-sentence refusal or explanation) instead
+    // of a single rewritten sentence, fall back to the original. Empirical
+    // threshold: 3× chars OR >300 chars absolute.
+    const looksLikeMetaResponse =
+      rewritten.length > Math.max(trimmed.length * 3, 300) ||
+      rewritten.includes("\n\n");
+
+    if (!rewritten || rewritten === trimmed || looksLikeMetaResponse) {
       return {
         original: trimmed,
         rewritten: trimmed,
