@@ -9,6 +9,7 @@
  * Each stage gracefully degrades if its provider key is missing.
  */
 import { hybridRetrieve, rrfRank, type Candidate } from "@/lib/rag/retrieval";
+import { rewriteQuery } from "@/lib/rag/rewriter";
 import { sql } from "@/lib/db/client";
 
 interface Args {
@@ -71,17 +72,28 @@ function printCandidates(
   const args = parseArgs(process.argv.slice(2));
   console.log(`query: ${JSON.stringify(args.query)}`);
 
-  // Phase 2 step 1: rewriter (added in commit 2)
-  // Phase 2 step 2: hybrid retrieval (this commit)
-  // Phase 2 step 3: reranker (added in commit 3)
+  // Step 1: rewrite (optional; gracefully skipped if key missing or --no-rewrite)
+  let queryForRetrieval = args.query;
+  if (args.rewrite) {
+    const rewrite = await rewriteQuery(args.query);
+    queryForRetrieval = rewrite.rewritten;
+    if (rewrite.rewritten_by_llm) {
+      console.log(`rewritten: ${JSON.stringify(rewrite.rewritten)}  (${rewrite.latency_ms}ms)`);
+    } else if (rewrite.latency_ms > 0) {
+      console.log(`rewriter ran but returned identical / failed (${rewrite.latency_ms}ms)`);
+    } else {
+      console.log("rewriter skipped (no anthropic key or empty input)");
+    }
+  }
 
+  // Step 2: hybrid retrieval
   const t0 = Date.now();
   const timings: { embed_ms: number; vector_ms: number; fts_ms: number } = {
     embed_ms: 0,
     vector_ms: 0,
     fts_ms: 0,
   };
-  const candidates = await hybridRetrieve(args.query, {
+  const candidates = await hybridRetrieve(queryForRetrieval, {
     onTiming: (t) => Object.assign(timings, t),
   });
   const total_ms = Date.now() - t0;
