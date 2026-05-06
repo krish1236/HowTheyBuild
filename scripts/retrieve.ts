@@ -10,6 +10,7 @@
  */
 import { hybridRetrieve, rrfRank, type Candidate } from "@/lib/rag/retrieval";
 import { rewriteQuery } from "@/lib/rag/rewriter";
+import { rerank } from "@/lib/rag/rerank";
 import { sql } from "@/lib/db/client";
 
 interface Args {
@@ -106,12 +107,31 @@ function printCandidates(
     `retrieved ${candidates.length} candidates (vector-only=${vectorOnly} fts-only=${ftsOnly} both=${both})`,
   );
   console.log(
-    `  timings: embed=${timings.embed_ms}ms  vector=${timings.vector_ms}ms  fts=${timings.fts_ms}ms  total=${total_ms}ms`,
+    `  timings: embed=${timings.embed_ms}ms  vector=${timings.vector_ms}ms  fts=${timings.fts_ms}ms  hybrid_total=${total_ms}ms`,
   );
 
-  // Until reranker lands in step 3, sort by RRF for a stable joint ranking.
-  const ranked = rrfRank(candidates);
-  printCandidates(ranked, null, args.top);
+  // Step 3: rerank (gracefully passes through if Cohere key missing)
+  let finalRanked: Candidate[];
+  let rerankScores: Map<string, number> | null = null;
+  if (args.rerank) {
+    const result = await rerank(queryForRetrieval, candidates, { topK: args.top });
+    if (result.reranked) {
+      console.log(`reranked ${candidates.length} → ${result.candidates.length} (${result.latency_ms}ms)`);
+      rerankScores = new Map(
+        result.candidates
+          .filter((c) => c.rerank_score !== null)
+          .map((c) => [c.chunk_id, c.rerank_score as number]),
+      );
+      finalRanked = result.candidates;
+    } else {
+      console.log("rerank skipped (no cohere key or failure) — falling back to RRF");
+      finalRanked = rrfRank(candidates);
+    }
+  } else {
+    finalRanked = rrfRank(candidates);
+  }
+
+  printCandidates(finalRanked, rerankScores, args.top);
 
   await sql.end();
 })().catch(async (err) => {
