@@ -11,6 +11,7 @@
     "db:migrate": "tsx scripts/db/migrate.ts",
     "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild",
     "ingest": "tsx --env-file=.env scripts/ingest.ts",
+    "retrieve": "tsx --env-file=.env scripts/retrieve.ts",
     "verify-keys": "tsx --env-file=.env scripts/verify-keys.ts"
   },
   "dependencies": {
