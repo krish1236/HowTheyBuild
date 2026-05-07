@@ -33,6 +33,8 @@ export interface GenerateOptions {
   onToken?: (delta: string) => void;
   /** Hard timeout for the whole generation (incl. retry). Default 30s. */
   timeoutMs?: number;
+  /** External cancel signal (e.g. HTTP client disconnect). Composed with timeout. */
+  abortSignal?: AbortSignal;
 }
 
 export type GenerateResult =
@@ -110,6 +112,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
     refusalThreshold = 0.3,
     onToken,
     timeoutMs = 30_000,
+    abortSignal,
   } = opts;
   const t0 = Date.now();
 
@@ -141,7 +144,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   const prompt = assemblePrompt({ query, candidates: trimmed });
 
   // First attempt
-  const first = await callLLM(prompt, query, false, onToken, timeoutMs);
+  const first = await callLLM(prompt, query, false, onToken, timeoutMs, abortSignal);
   let validation = validateCitations(first.text, prompt.cited_chunk_ids);
 
   if (validation.invalid.length === 0) {
@@ -159,7 +162,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   // Retry once with stricter citation rules. Stream is replaced; consumer is
   // notified via onToken with a marker so the CLI can show a "retrying" hint.
   onToken?.("\n\n[invalid citation detected — retrying]\n\n");
-  const retry = await callLLM(prompt, query, true, onToken, timeoutMs);
+  const retry = await callLLM(prompt, query, true, onToken, timeoutMs, abortSignal);
   validation = validateCitations(retry.text, prompt.cited_chunk_ids);
 
   const combinedUsage: Usage = {
@@ -206,12 +209,17 @@ async function callLLM(
   strict: boolean,
   onToken: ((delta: string) => void) | undefined,
   timeoutMs: number,
+  externalSignal?: AbortSignal,
 ): Promise<LLMCallResult> {
   const client = getAnthropic();
   const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Compose timeout + external signal so EITHER source can cancel the SDK call.
+  const timeoutController = new AbortController();
+  const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
+  const composed = externalSignal
+    ? AbortSignal.any([timeoutController.signal, externalSignal])
+    : timeoutController.signal;
 
   const tStart = Date.now();
   let ttft_ms: number | null = null;
@@ -226,7 +234,7 @@ async function callLLM(
         system: strict ? prompt.system + STRICT_RETRY_SUFFIX : prompt.system,
         messages: [{ role: "user", content: prompt.user_message }],
       },
-      { signal: controller.signal },
+      { signal: composed },
     );
 
     for await (const event of stream) {
