@@ -17,3 +17,88 @@ body {
   color: var(--foreground);
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+/* Lightweight prose styling for answer markdown — no @tailwindcss/typography
+   to keep the dependency surface minimal in V1. */
+.prose-answer {
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+.prose-answer h1,
+.prose-answer h2,
+.prose-answer h3,
+.prose-answer h4 {
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+.prose-answer h1 { font-size: 1.4rem; }
+.prose-answer h2 { font-size: 1.2rem; }
+.prose-answer h3 { font-size: 1.05rem; }
+.prose-answer h4 { font-size: 1rem; }
+.prose-answer p { margin-top: 0.75em; margin-bottom: 0.75em; }
+.prose-answer ul,
+.prose-answer ol { margin: 0.75em 0; padding-left: 1.5em; }
+.prose-answer ul { list-style: disc; }
+.prose-answer ol { list-style: decimal; }
+.prose-answer li { margin: 0.25em 0; }
+.prose-answer strong { font-weight: 600; }
+.prose-answer code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.05);
+}
+@media (prefers-color-scheme: dark) {
+  .prose-answer code { background: rgb(255 255 255 / 0.08); }
+}
+.prose-answer pre {
+  margin: 1em 0;
+  padding: 0.85em 1em;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.04);
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+@media (prefers-color-scheme: dark) {
+  .prose-answer pre { background: rgb(255 255 255 / 0.04); }
+}
+.prose-answer pre code { padding: 0; background: none; }
+.prose-answer blockquote {
+  border-left: 3px solid rgb(0 0 0 / 0.15);
+  margin: 1em 0;
+  padding-left: 1em;
+  color: rgb(0 0 0 / 0.7);
+}
+@media (prefers-color-scheme: dark) {
+  .prose-answer blockquote {
+    border-left-color: rgb(255 255 255 / 0.2);
+    color: rgb(255 255 255 / 0.75);
+  }
+}
+.prose-answer table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.875rem;
+}
+.prose-answer th,
+.prose-answer td {
+  border: 1px solid rgb(0 0 0 / 0.1);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+@media (prefers-color-scheme: dark) {
+  .prose-answer th,
+  .prose-answer td { border-color: rgb(255 255 255 / 0.1); }
+}
+.prose-answer hr {
+  border: 0;
+  border-top: 1px solid rgb(0 0 0 / 0.1);
+  margin: 1.5em 0;
+}
+@media (prefers-color-scheme: dark) {
+  .prose-answer hr { border-top-color: rgb(255 255 255 / 0.1); }
+}
