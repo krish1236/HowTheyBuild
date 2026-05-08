@@ -23,7 +23,17 @@ import { getSource } from "@/ingestion/sources";
 export interface IngestOptions {
   sourceSlug: string;
   limit?: number;
+  /** Per-source: how many items to parse/embed/index in parallel. Default 3.
+   * Embedding API rate limits + politeness toward source servers cap this low. */
+  concurrency?: number;
   onItemDone?: (info: { url: string; result: IndexResult; chunks: number }) => void;
+}
+
+export interface IngestFailure {
+  source: string;
+  url: string;
+  reason: string;
+  at: string;
 }
 
 export interface IngestSummary {
@@ -37,6 +47,7 @@ export interface IngestSummary {
   total_chunks_indexed: number;
   total_embed_tokens: number;
   embed_cost_usd_est: number;
+  failures: IngestFailure[];
 }
 
 const COST_PER_MTOK_USD: Record<string, number> = {
@@ -61,6 +72,7 @@ export async function ingestSource(opts: IngestOptions): Promise<IngestSummary> 
     total_chunks_indexed: 0,
     total_embed_tokens: 0,
     embed_cost_usd_est: 0,
+    failures: [],
   };
 
   console.log(`[${opts.sourceSlug}] fetching RSS...`);
@@ -74,21 +86,23 @@ export async function ingestSource(opts: IngestOptions): Promise<IngestSummary> 
   const embeddingModelId = `openai:${embedModel}:v1`;
   const costPerMTok = COST_PER_MTOK_USD[embedModel] ?? 0.02;
 
-  for (let i = 0; i < Math.min(items.length, cap); i++) {
-    const item: RSSItem = items[i];
+  const queue = items.slice(0, cap);
+  const concurrency = Math.max(1, opts.concurrency ?? 3);
+
+  // Shared mutable counters; we update them inside workers under the
+  // single-threaded JS event loop, so no locking is needed.
+  let completed = 0;
+
+  async function processItem(item: RSSItem, indexInQueue: number) {
+    const tag = `[${opts.sourceSlug} ${indexInQueue + 1}/${queue.length}]`;
     try {
-      if (source.use_rss_content) {
-        if (!item.content_html) {
-          summary.skipped_no_content++;
-          console.log(`[${i + 1}/${cap}] skip (no content): ${item.url}`);
-          continue;
-        }
-      } else {
-        // Phase 1 supports use_rss_content=true sources only; full HTML
-        // fetcher arrives in Phase 6.
-        throw new Error(
-          `Source ${opts.sourceSlug}: use_rss_content=false not yet supported`,
-        );
+      if (!source.use_rss_content) {
+        throw new Error(`use_rss_content=false not yet supported in this connector`);
+      }
+      if (!item.content_html) {
+        summary.skipped_no_content++;
+        console.log(`${tag} skip (no content) ${item.url}`);
+        return;
       }
 
       const parsed = parseHTML(item.content_html, item.url, {
@@ -96,18 +110,15 @@ export async function ingestSource(opts: IngestOptions): Promise<IngestSummary> 
         fallbackAuthor: item.author ?? undefined,
       });
 
-      // Idempotency check BEFORE embedding. If we already have this doc with
-      // the same content_hash, skip — no chunking, no API call, no DB write
-      // beyond bumping last_seen_at. This is what makes re-runs free.
+      // Idempotency check BEFORE embedding. Re-running on unchanged content
+      // costs zero API tokens.
       const existing = await findDocumentByUrl(item.url);
       if (existing && existing.content_hash === parsed.content_hash) {
         await bumpLastSeen(existing.id);
         summary.skipped_unchanged++;
-        console.log(
-          `[${i + 1}/${cap}] ${"skipped_unchanged".padEnd(18)} chunks=-- ${item.url}`,
-        );
+        console.log(`${tag} skipped_unchanged ${item.url}`);
         opts.onItemDone?.({ url: item.url, result: "skipped_unchanged", chunks: 0 });
-        continue;
+        return;
       }
 
       const chunks = chunkDocument({
@@ -151,17 +162,36 @@ export async function ingestSource(opts: IngestOptions): Promise<IngestSummary> 
       summary.total_chunks_indexed += chunks.length;
       summary.total_embed_tokens += approxTokens;
 
-      console.log(
-        `[${i + 1}/${cap}] ${result.padEnd(18)} chunks=${chunks.length.toString().padStart(2)} ${item.url}`,
-      );
-
+      console.log(`${tag} ${result.padEnd(10)} chunks=${chunks.length} ${item.url}`);
       opts.onItemDone?.({ url: item.url, result, chunks: chunks.length });
     } catch (err) {
       summary.failed++;
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[${i + 1}/${cap}] FAILED ${item.url}: ${msg.slice(0, 200)}`);
+      summary.failures.push({
+        source: opts.sourceSlug,
+        url: item.url,
+        reason: msg.slice(0, 300),
+        at: new Date().toISOString(),
+      });
+      console.error(`${tag} FAILED ${item.url}: ${msg.slice(0, 160)}`);
+    } finally {
+      completed++;
     }
   }
+
+  // Simple cursor-based parallel workers — no extra dep needed.
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const i = cursor++;
+      if (i >= queue.length) return;
+      await processItem(queue[i], i);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, queue.length) }, worker),
+  );
+  void completed; // keep variable for future progress hooks
 
   summary.embed_cost_usd_est =
     (summary.total_embed_tokens / 1_000_000) * costPerMTok;

@@ -8,11 +8,74 @@
     "contact_email": null,
     "use_rss_content": true
   },
-  "stripe-engineering": {
-    "name": "Stripe Engineering",
-    "base_url": "https://stripe.com/blog",
+  "aws-blog": {
+    "name": "AWS Blog",
+    "base_url": "https://aws.amazon.com/blogs/aws",
     "source_type": "blog",
-    "rss_url": "https://stripe.com/blog/feed.rss",
+    "rss_url": "https://aws.amazon.com/blogs/aws/feed/",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "aws-architecture": {
+    "name": "AWS Architecture Blog",
+    "base_url": "https://aws.amazon.com/blogs/architecture",
+    "source_type": "blog",
+    "rss_url": "https://aws.amazon.com/blogs/architecture/feed/",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "airbnb-engineering": {
+    "name": "Airbnb Engineering",
+    "base_url": "https://medium.com/airbnb-engineering",
+    "source_type": "blog",
+    "rss_url": "https://medium.com/feed/airbnb-engineering",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "github-engineering": {
+    "name": "GitHub Engineering",
+    "base_url": "https://github.blog/category/engineering/",
+    "source_type": "blog",
+    "rss_url": "https://github.blog/category/engineering/feed/",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "slack-engineering": {
+    "name": "Slack Engineering",
+    "base_url": "https://slack.engineering",
+    "source_type": "blog",
+    "rss_url": "https://slack.engineering/feed/",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "pinterest-engineering": {
+    "name": "Pinterest Engineering",
+    "base_url": "https://medium.com/pinterest-engineering",
+    "source_type": "blog",
+    "rss_url": "https://medium.com/feed/pinterest-engineering",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "dropbox-tech": {
+    "name": "Dropbox Tech",
+    "base_url": "https://dropbox.tech",
+    "source_type": "blog",
+    "rss_url": "https://dropbox.tech/feed",
+    "license_tag": "copyrighted",
+    "contact_email": null,
+    "use_rss_content": true
+  },
+  "meta-engineering": {
+    "name": "Meta Engineering",
+    "base_url": "https://engineering.fb.com",
+    "source_type": "blog",
+    "rss_url": "https://engineering.fb.com/feed/",
     "license_tag": "copyrighted",
     "contact_email": null,
     "use_rss_content": true
