@@ -51,7 +51,8 @@ env/
 *.swo
 *~
 
-# Logs
+# Logs (already excluded as `logs/`; queries.jsonl is the structured request log
+# from lib/util/logger.ts and should never be committed)
 *.log
 logs/
 

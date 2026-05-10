@@ -26,6 +26,7 @@ import { generate, type GenerateResult } from "@/lib/rag/generator";
 import { getCachedAnswer, storeCachedAnswer, type CachedAnswer } from "@/lib/rag/answer_cache";
 import { insertQueryLog } from "@/lib/db/queries";
 import { clientIpFromHeaders, hashIp } from "@/lib/util/hash";
+import { logRequest } from "@/lib/util/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -288,6 +289,27 @@ export async function POST(req: Request): Promise<Response> {
         } catch (logErr) {
           console.error("insertQueryLog failed:", logErr);
         }
+        // Append a structured line to logs/queries.jsonl for Phase 9 observability.
+        void logRequest({
+          ts: new Date().toISOString(),
+          client_ip_hash: clientIpHash,
+          query,
+          rewritten_query: rewritten,
+          retrieved: retrievedIds.length,
+          reranked: rerankedIds.length,
+          top_rerank_score: topRerankScore,
+          cache_hit: cacheHit,
+          refused: errored !== null || (result?.type === "refused"),
+          refusal_reason: errored?.code ?? (result?.type === "refused" ? result.reason : null),
+          llm_model: model,
+          input_tokens: result?.usage.input_tokens ?? 0,
+          cache_read_tokens: result?.usage.cache_read_input_tokens ?? 0,
+          output_tokens: result?.usage.output_tokens ?? 0,
+          cost_usd: result?.usage.cost_usd ?? 0,
+          total_ms: Date.now() - t0,
+          ttft_ms: result?.type === "answer" ? result.ttft_ms ?? null : null,
+          error_code: errored?.code ?? null,
+        });
         controller.close();
       }
     },
