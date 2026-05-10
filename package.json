@@ -11,6 +11,8 @@
     "db:migrate": "tsx --env-file=.env scripts/db/migrate.ts",
     "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild",
     "ingest": "tsx --env-file=.env scripts/ingest.ts",
+    "daily-sync": "tsx --env-file=.env scripts/daily-sync.ts",
+    "reconcile": "tsx --env-file=.env scripts/reconcile.ts",
     "retrieve": "tsx --env-file=.env scripts/retrieve.ts",
     "generate": "tsx --env-file=.env scripts/generate.ts",
     "eval": "tsx --env-file=.env scripts/eval.ts",
