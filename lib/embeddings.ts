@@ -6,11 +6,23 @@
  *
  * Used at ingest time (many chunks) and at query time (one query). Same surface.
  */
+import { createHash } from "node:crypto";
 import { getOpenAI } from "@/lib/clients/openai";
+import { getJSON, setJSON } from "@/lib/cache/redis";
 
 const DEFAULT_BATCH_SIZE = 32;
 const MAX_RETRIES = 4;
 const BASE_BACKOFF_MS = 500;
+const QUERY_EMBED_TTL_S = 24 * 60 * 60; // 24h — Module 8
+
+function normalizeForCacheKey(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function queryEmbedKey(text: string, model: string): string {
+  const h = createHash("sha256").update(normalizeForCacheKey(text)).digest("hex").slice(0, 32);
+  return `embed:v1:${model}:${h}`;
+}
 
 export function getEmbedModel(): string {
   return process.env.OPENAI_EMBED_MODEL || "text-embedding-3-small";
@@ -19,6 +31,33 @@ export function getEmbedModel(): string {
 export interface EmbedOptions {
   model?: string;
   batchSize?: number;
+  /** Enable query-embedding cache (single-text only). Default off. The
+   *  ingestion path bypasses this; only query-time embeds opt in. */
+  cache?: boolean;
+}
+
+/**
+ * Embed a single query string with optional Redis-backed cache (24h TTL).
+ * Returns `{ vector, hit }` so callers can log cache_hit metrics.
+ */
+export async function embedQueryWithCache(
+  text: string,
+  opts: { model?: string } = {},
+): Promise<{ vector: number[]; hit: boolean; latency_ms: number }> {
+  const t0 = Date.now();
+  const model = opts.model ?? getEmbedModel();
+  if (process.env.MOCK_EMBED === "1") {
+    const [v] = await embedTexts([text], opts);
+    return { vector: v, hit: false, latency_ms: Date.now() - t0 };
+  }
+  const key = queryEmbedKey(text, model);
+  const cached = await getJSON<number[]>(key);
+  if (cached) return { vector: cached, hit: true, latency_ms: Date.now() - t0 };
+
+  const [v] = await embedTexts([text], opts);
+  // Fire-and-forget store; don't make the caller wait on Redis write.
+  void setJSON(key, v, QUERY_EMBED_TTL_S);
+  return { vector: v, hit: false, latency_ms: Date.now() - t0 };
 }
 
 /**

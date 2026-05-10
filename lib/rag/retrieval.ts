@@ -13,7 +13,7 @@
  * fusion is no fusion."
  */
 import { sql } from "@/lib/db/client";
-import { embedTexts } from "@/lib/embeddings";
+import { embedQueryWithCache } from "@/lib/embeddings";
 
 export interface Candidate {
   chunk_id: string;
@@ -36,7 +36,7 @@ export interface HybridRetrieveOptions {
   vector_limit?: number; // default 50
   fts_limit?: number; // default 50
   /** Optional debug hook to capture per-stage timings. */
-  onTiming?: (timings: { embed_ms: number; vector_ms: number; fts_ms: number }) => void;
+  onTiming?: (timings: { embed_ms: number; vector_ms: number; fts_ms: number; embed_cache_hit: boolean }) => void;
 }
 
 interface VectorRow {
@@ -74,10 +74,9 @@ export async function hybridRetrieve(
   const vectorLimit = opts.vector_limit ?? 50;
   const ftsLimit = opts.fts_limit ?? 50;
 
-  // 1. Embed the query (one short call; not batched).
-  const t0 = Date.now();
-  const [queryEmbedding] = await embedTexts([query]);
-  const embed_ms = Date.now() - t0;
+  // 1. Embed the query — Redis-cached at the query level (24h TTL).
+  const { vector: queryEmbedding, hit: embed_cache_hit, latency_ms: embed_ms } =
+    await embedQueryWithCache(query);
   const qvec = vectorLiteral(queryEmbedding);
 
   // 2. Run vector + FTS in parallel.
@@ -126,7 +125,7 @@ export async function hybridRetrieve(
 
   const vector_ms = Date.now() - tVec;
   const fts_ms = Date.now() - tFts;
-  opts.onTiming?.({ embed_ms, vector_ms, fts_ms });
+  opts.onTiming?.({ embed_ms, vector_ms, fts_ms, embed_cache_hit });
 
   // 3. Dedupe by chunk_id, preserve both scores when a chunk appears in both.
   const merged = new Map<string, Candidate>();
