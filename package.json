@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "tsx scripts/db/migrate.ts",
+    "db:migrate": "tsx --env-file=.env scripts/db/migrate.ts",
     "db:psql": "docker compose exec postgres psql -U htb -d howtheybuild",
     "ingest": "tsx --env-file=.env scripts/ingest.ts",
     "retrieve": "tsx --env-file=.env scripts/retrieve.ts",

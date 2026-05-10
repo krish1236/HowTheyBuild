@@ -25,6 +25,7 @@ export interface QueryLogRow {
   total_cost_usd: number;
   total_latency_ms: number;
   ttft_ms: number | null;
+  cache_hit: boolean;
 }
 
 export async function insertQueryLog(row: QueryLogRow): Promise<void> {
@@ -44,7 +45,8 @@ export async function insertQueryLog(row: QueryLogRow): Promise<void> {
       llm_output_tokens,
       total_cost_usd,
       total_latency_ms,
-      ttft_ms
+      ttft_ms,
+      cache_hit
     ) VALUES (
       ${row.client_ip_hash},
       ${row.query_text},
@@ -60,7 +62,8 @@ export async function insertQueryLog(row: QueryLogRow): Promise<void> {
       ${row.llm_output_tokens},
       ${row.total_cost_usd},
       ${row.total_latency_ms},
-      ${row.ttft_ms}
+      ${row.ttft_ms},
+      ${row.cache_hit}
     )
   `;
 }
