@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-10T02:33:42.878Z",
+  "golden_set_size": 30,
+  "ran": 30,
+  "judge_model": "claude-opus-4-5-20251101",
+  "aggregate": {
+    "count": 30,
+    "recall_at_50": 1,
+    "ndcg_at_10": 0.8761938552267348,
+    "citation_accuracy": 1,
+    "faithfulness": 1,
+    "refusal_rate": 0.06666666666666667,
+    "refusal_correct_rate": 1,
+    "p50_latency_ms": 23591,
+    "p95_latency_ms": 33566,
+    "total_cost_usd": 1.0954650000000004,
+    "judged_count": 28
+  },
+  "thresholds_passed": false
+}

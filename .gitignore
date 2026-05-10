@@ -59,6 +59,9 @@ logs/
 data/
 tmp/
 .cache/
+
+# Eval per-run JSONLs are large; keep only baseline.json in repo
+eval/runs/
 *.sqlite
 *.sqlite3
 *.db
