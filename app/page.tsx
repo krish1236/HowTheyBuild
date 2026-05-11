@@ -151,9 +151,15 @@ function HomeScreen({ onAsk }: HomeScreenProps) {
   };
 
   const scopeOpts = ["all", "networking", "storage", "deploy", "realtime", "postmortems"];
-  const tsNow = useMemo(() => {
-    if (typeof window === "undefined") return "00:00:00Z";
-    return new Date().toISOString().slice(11, 19) + "Z";
+
+  // SSR-safe clock: empty on server, populated on mount, ticks every second.
+  // Avoids the hydration mismatch from Date.now() being non-deterministic.
+  const [tsNow, setTsNow] = useState<string>("");
+  useEffect(() => {
+    const tick = () => setTsNow(new Date().toISOString().slice(11, 19) + "Z");
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, []);
 
   return (
